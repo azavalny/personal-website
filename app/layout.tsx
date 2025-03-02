@@ -11,15 +11,15 @@ import { baseUrl } from './sitemap'
 export const metadata: Metadata = {
   metadataBase: new URL(baseUrl),
   title: {
-    default: 'Next.js Portfolio Starter',
-    template: '%s | Next.js Portfolio Starter',
+    default: 'Alex Zavalny',
+    template: '%s | Alex Zavalny',
   },
-  description: 'This is my portfolio.',
+  description: 'Alex Zavalny Personal Website',
   openGraph: {
-    title: 'My Portfolio',
-    description: 'This is my portfolio.',
+    title: 'Alex Zavalny Personal Website',
+    description: 'Alex Zavalny Personal Website',
     url: baseUrl,
-    siteName: 'My Portfolio',
+    siteName: 'Alex Zavalny Personal Website',
     locale: 'en_US',
     type: 'website',
   },
@@ -33,6 +33,10 @@ export const metadata: Metadata = {
       'max-image-preview': 'large',
       'max-snippet': -1,
     },
+  },
+  icons: {
+    icon: '/favicon.ico',
+    shortcut: '/favicon.ico'
   },
 }
 
