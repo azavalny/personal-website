@@ -10,7 +10,7 @@ export default function Page() {
       </h1>
       <div className="relative w-72 h-72 rounded-full overflow-hidden border-4 border-blue-300 shadow-lg mx-auto">
         <Image
-          src="/alex_headshot.png"
+          src="/Alex_V2.jpg"
           alt="Alex Zavalny"
           layout="fill"
           objectFit="cover"
