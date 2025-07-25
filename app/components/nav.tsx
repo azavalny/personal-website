@@ -2,7 +2,7 @@ import Link from 'next/link'
 
 const navItems = {
   '/': { name: 'About' },
-  'https://www.youtube.com/@aiwithaz': { name: 'YouTube' },
+  'https://www.youtube.com/@ai-with-alex': { name: 'YouTube' },
   '/essays': { name: 'Essays' },
 }
 

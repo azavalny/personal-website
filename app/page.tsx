@@ -18,7 +18,7 @@ export default function Page() {
       </div>
       <p className="mt-4 text-gray-700">
         <span className="text-xl font-bold">
-          {`I'm a Machine Learning Engineer and YouTuber passionate about building data-driven software for enterprise and finance.`}
+          {`I'm a Software Engineer and YouTuber.`}
         </span>
         <br />
         <br />
@@ -33,7 +33,7 @@ export default function Page() {
         <a href="https://www.linkedin.com/in/alex-zavalny-a98241185/" target="_blank" rel="noopener noreferrer">
           <Linkedin className="w-12 h-12 text-blue-600 hover:text-blue-800 transition" />
         </a>
-        <a href="https://www.youtube.com/@aiwithaz" target="_blank" rel="noopener noreferrer">
+        <a href="https://www.youtube.com/@ai-with-alex" target="_blank" rel="noopener noreferrer">
           <Youtube className="w-12 h-12 text-red-600 hover:text-red-800 transition" />
         </a>
         <a href="https://github.com/azavalny" target="_blank" rel="noopener noreferrer">

@@ -32,7 +32,7 @@ export default function Footer() {
         className="flex items-center transition-all hover:text-neutral-800 dark:hover:text-neutral-100"
         rel="noopener noreferrer"
         target="_blank"
-        href="https://www.youtube.com/@aiwithaz"
+        href="https://www.youtube.com/@ai-with-alex"
       >
         <p className="ml-2 h-7">YouTube</p>
       </a>

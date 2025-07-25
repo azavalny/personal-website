@@ -48,6 +48,22 @@ function RoundedImage(props) {
   return <Image alt={props.alt} className="rounded-lg" {...props} />
 }
 
+function CustomImage(props) {
+  return (
+    <div className="relative w-full rounded-lg overflow-hidden">
+      <Image 
+        alt={props.alt} 
+        className="rounded-lg object-contain w-full h-auto"
+        width={0}
+        height={0}
+        sizes="100vw"
+        style={{ width: '100%', height: 'auto' }}
+        {...props} 
+      />
+    </div>
+  )
+}
+
 function Code({ children, ...props }) {
   let codeHTML = highlight(children)
   return <code dangerouslySetInnerHTML={{ __html: codeHTML }} {...props} />
@@ -94,6 +110,7 @@ let components = {
   h5: createHeading(5),
   h6: createHeading(6),
   Image: RoundedImage,
+  img: CustomImage,
   a: CustomLink,
   code: Code,
   Table,
