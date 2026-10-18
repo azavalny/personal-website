@@ -1,6 +1,12 @@
-import Image from 'next/image'
-import { BlogPosts } from 'app/components/posts'
-import { Linkedin, Instagram, Youtube, Github, GraduationCap } from 'lucide-react' // Import icons
+import Image from "next/image";
+import { BlogPosts } from "app/components/posts";
+import {
+  Linkedin,
+  Instagram,
+  Youtube,
+  Github,
+  GraduationCap,
+} from "lucide-react"; // Import icons
 
 export default function Page() {
   return (
@@ -17,40 +23,57 @@ export default function Page() {
         />
       </div>
       <p className="mt-4 text-gray-700">
-        <span className="text-xl font-bold">
-          {`I'm a Software Engineer and YouTuber.`}
-        </span>
+        <span className="text-xl font-bold">{`I'm an AI/ML engineer and YouTuber.`}</span>
         <br />
         <br />
         <span className="text-lg">
-          {`I've worked at Apollo Global Management and JP Morgan, published AI research, and presented at top institutions and conferences like ACL, Harvard, Yale, and Brown.`}
+          {`I've worked at the biggest financial institutions in the world like Apollo Global Management, JP Morgan, and Bloomberg as well as published AI research and presented at top institutions and conferences like ACL, Harvard, Yale, and Brown.`}
         </span>
       </p>
 
-
       {/* Social Media Links */}
       <div className="mt-6 flex justify-center space-x-6">
-        <a href="https://www.linkedin.com/in/alex-zavalny-a98241185/" target="_blank" rel="noopener noreferrer">
+        <a
+          href="https://www.linkedin.com/in/alex-zavalny-a98241185/"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
           <Linkedin className="w-12 h-12 text-blue-600 hover:text-blue-800 transition" />
         </a>
-        <a href="https://www.youtube.com/@ai-with-alex" target="_blank" rel="noopener noreferrer">
+        <a
+          href="https://www.youtube.com/@ai-with-alex"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
           <Youtube className="w-12 h-12 text-red-600 hover:text-red-800 transition" />
         </a>
-        <a href="https://github.com/azavalny" target="_blank" rel="noopener noreferrer">
+        <a
+          href="https://github.com/azavalny"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
           <Github className="w-12 h-12 text-gray-900 hover:text-gray-700 transition" />
         </a>
-        <a href="https://scholar.google.com/citations?user=jgnt_1UAAAAJ" target="_blank" rel="noopener noreferrer">
+        <a
+          href="https://scholar.google.com/citations?user=jgnt_1UAAAAJ"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
           <GraduationCap className="w-12 h-12 text-blue-500 hover:text-blue-700 transition" />
         </a>
-        <a href="https://www.instagram.com/alex_zavalny/" target="_blank" rel="noopener noreferrer">
+        <a
+          href="https://www.instagram.com/alex_zavalny/"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
           <Instagram className="w-12 h-12 text-pink-500 hover:text-pink-700 transition" />
         </a>
       </div>
 
       <div>
-        <br/>
+        <br />
         {/* <BlogPosts /> */}
       </div>
     </section>
-  )
+  );
 }
