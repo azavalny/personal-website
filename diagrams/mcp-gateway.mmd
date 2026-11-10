@@ -1,0 +1,18 @@
+%%{init: {"flowchart": {"wrappingWidth": 300}}}%%
+flowchart TB
+    Client["MCP Client<br/>(Claude Code, Cursor, ChatGPT)"]
+    IdP["Identity Provider<br/>(Okta, Auth0, Google)"]
+
+    subgraph Cluster["Private cluster"]
+        direction TB
+        Gateway["MCP Gateway<br/>OAuth, token validation, scopes,<br/>rate limits, audit logs"]
+        ServerA["MCP Server A<br/>Tool functions"]
+        ServerB["MCP Server B<br/>Tool functions"]
+        ServerC["MCP Server C<br/>Tool functions"]
+        Gateway <--> ServerA
+        Gateway <--> ServerB
+        Gateway <--> ServerC
+    end
+
+    Client <-->|"Authenticate once + Bearer token"| Gateway
+    IdP <-->|"login + /callback"| Gateway

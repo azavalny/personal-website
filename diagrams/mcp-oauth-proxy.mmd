@@ -1,0 +1,16 @@
+flowchart LR
+    Client["MCP Client<br/>(Claude Code, Cursor, ChatGPT)"]
+    IdP["Identity Provider<br/>(Okta, Auth0, Google)"]
+
+    subgraph Pod["Single Replica MCP server"]
+        direction TB
+        Proxy["OAuth Proxy"]
+        State[("Local auth state<br/>(in-memory)")]
+        Server["MCP Server Tool functions"]
+        Proxy <--> State
+        Proxy <-->|"4. Bearer token"| Server
+    end
+
+    Client -->|"1. /authorize"| Proxy
+    Proxy <-->|"2. login + /callback"| IdP
+    Client -->|"3. /token"| Proxy

@@ -3,6 +3,7 @@ import Image from 'next/image'
 import { MDXRemote } from 'next-mdx-remote/rsc'
 import { highlight } from 'sugar-high'
 import React from 'react'
+import { ZoomableImage } from './zoomable-image'
 
 function Table({ data }) {
   let headers = data.headers.map((header, index) => (
@@ -46,22 +47,6 @@ function CustomLink(props) {
 
 function RoundedImage(props) {
   return <Image alt={props.alt} className="rounded-lg" {...props} />
-}
-
-function CustomImage(props) {
-  return (
-    <div className="relative w-full rounded-lg overflow-hidden">
-      <Image 
-        alt={props.alt} 
-        className="rounded-lg object-contain w-full h-auto"
-        width={0}
-        height={0}
-        sizes="100vw"
-        style={{ width: '100%', height: 'auto' }}
-        {...props} 
-      />
-    </div>
-  )
 }
 
 function Code({ children, ...props }) {
@@ -110,7 +95,7 @@ let components = {
   h5: createHeading(5),
   h6: createHeading(6),
   Image: RoundedImage,
-  img: CustomImage,
+  img: ZoomableImage,
   a: CustomLink,
   code: Code,
   Table,

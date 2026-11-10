@@ -23,7 +23,7 @@ export default function Page() {
         />
       </div>
       <p className="mt-4 text-gray-700">
-        <span className="text-xl font-bold">{`I'm an AI/ML engineer and YouTuber.`}</span>
+        <span className="text-xl font-bold">{`I'm an AI/ML Engineer and YouTuber.`}</span>
         <br />
         <br />
         <span className="text-lg">

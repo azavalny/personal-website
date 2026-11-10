@@ -1,0 +1,173 @@
+Alex Zavalny
+---
+title: 'Authenticating MCP Servers at Scale'
+publishedAt: '2026-11-08'
+summary: ''
+---
+
+As AI frameworks, tools, and libraries come and go each month (remember the OpenClaw hype?), its rare that the industry all agrees on a 
+singular method  like the Model Context Protocol (MCP). Many of the apps you use to create and consume information online have an MCP 
+server for you to interact with them via your favorite agentic harness.
+
+Similar to how single page or web applications are authenticated using OAuth 2.0, an organization must secure their MCP servers in order
+to limit the usage and information they have access to based on a user's role. The difference is that the "frontend" is your agentic harness (Claude, Cursor, etc.), which acts as the OAuth client and which you don't control, and the MCP server is the protected backend it has to authenticate against.
+
+In the rest of this article, I discuss how you setup OAuth for MCP servers, and showcase three scalable design patterns I've used at my work in an enterprise setting. 
+This article does go into technical depth, and is aimed at mid-level, senior+, or curious junior engineers/university students.
+
+# Index:
+
+How MCP OAuth works
+- [MCPs need an OAuth flow too](#mcps-need-an-oauth-flow-too)
+- [How OAuth 2.0 works for MCPs](#how-oauth-20-works-for-mcps)
+  - [Dynamic Client Registration (DCR)](#dynamic-client-registration-dcr)
+  - [Browser Redirect vs Device Flow login](#browser-redirect-vs-device-flow-login)
+
+System Design Patterns:
+- [1. Single-replica MCP Server with an OAuth Proxy](#1-single-replica-mcp-server-with-an-oauth-proxy)
+- [2. Multi-replica MCP Server with Redis/Shared cache](#2-multi-replica-mcp-server-with-redisshared-cache)
+- [3. MCP Gateway for controlling multiple related MCP servers](#3-mcp-gateway-for-controlling-multiple-related-mcp-servers)
+
+- [Closing thoughts](#closing-thoughts)
+
+
+# MCPs need an OAuth flow too:
+
+A coworker of mine was setting up authentication for his MCP server. Initially, he manually copied a refresh token from an admin panel 
+into his `mcp.json` file below. 
+
+```json
+{
+  "server": "https://mcp.example.com",
+  "auth": {
+    "method": "oauth2",
+    "client_id": "mcp-client-123",
+    "client_secret": "s3cr3t1234abcd5678efgh9012ijkl",
+    "refresh_token": "r1.bcd2efgHIJKLmnopQRstUVwxYZaBcdef",
+    "token_endpoint": "https://mcp.example.com/oauth/token"
+  }
+}
+```
+
+Aside from how insecure it is to manually work with refresh tokens, the bigger issue is that it lives outside your identity system. Even if an admin mints a token per user, someone has to issue, rotate, and revoke it by hand. It bypasses SSO and MFA, and it won't notice when someone changes roles or leaves the company. An OAuth flow ties every session to a real login through your identity provider, so access to MCP tools and data follows the user's current roles automatically, under one protocol.
+
+
+# How OAuth 2.0 works for MCPs
+
+```
+/authorize       → redirect to identity provider 
+/auth/callback   → identity provider redirects back
+/token           → exchange authorization code for access tokens
+/mcp             → use Bearer access token
+```
+
+These are the three main endpoints that your backend server will expose along with its `/mcp` route in this order:
+
+1. `/authorize`: The client starts the flow and the server redirects the browser to the identity provider (Auth0, Okta, Google OAuth, AWS Cognito)
+2. `/auth/callback`: The user signs in at the provider, which redirects the browser back to your server's `/callback` link with a short-lived authorization code
+3. `/token`: The client exchanges the server's code for an access and refresh token
+4. `/mcp`:  The client calls the server with `Authorization: Bearer eyJ...`
+
+Based on that authorization bearer token, your MCP server, acting as the OAuth server for the client and as a client of the identity provider,
+can now validate the token, identify which user is calling to then enforce **role based access control** before any tool runs.
+
+Your MCP server essentially acts as a regular backend server/microservice with 2 additional implementation details as it tries to authenticate using your
+server's:
+
+## Dynamic Client Registration (DCR) 
+
+As mentioned earlier, your front end/client is your agentic harness, which you don't control and can't register a client ahead of time. 
+DCR lets an MCP client register its OAuth metadata on the fly (client name, redirect URI, grant types, scopes, token auth method). 
+
+Without DCR, every client would need a `client_id` and `client_secret` registered by hand in your identity provider's admin console.
+That doesn't allow your MCP to support different clients, where you can't know ahead of time which clients (Cursor, Claude Desktop, a custom script) 
+will connect to your MCP server. 
+
+With DCR, the client registers itself with a single request to your registration endpoint 
+and gets back a `client_id`. No admin panel, no copied secrets, and the OAuth flow above can start right away.
+
+
+For a more detailed diagram check out [FastMCP's documentation](https://gofastmcp.com/docs/servers/auth/oauth-proxy#oauth-flow) that discusses each step.
+
+
+## Browser Redirect vs Device Flow login
+
+A second implementation detail would be how you approach the login step itself, since not every client can open a browser. There are two flows:
+
+**Browser redirect (authorization code + PKCE):** the client opens the user's browser at `/authorize`, the user signs in with your identity provider, 
+and the provider redirects back to your callback URL with a short-lived code that the client exchanges at `/token`. This requires a browser 
+on the same machine and configuring a redirect URI (the `/callback` url), which makes it the best fit for desktop clients like Cursor or Claude Desktop.
+
+**Device flow (device authorization grant):** the client gets a device code and shows the user a URL and a short code (e.g. "go to this URL and enter ABCD-1234"). 
+The user signs in on any other device, like their phone, while the client polls the token endpoint until the login is approved. There's no redirect URI involved, 
+which makes it the best fit for headless or input-limited clients like a remote server over SSH, a CLI in a container, or your Samsung smart fridge.
+
+The rule of thumb: if the client can open a browser, use browser redirect. If it can't, use device flow. Either one beats pasting a token into `mcp.json`.
+
+Now onto 3 MCP system design patterns I've found helpful:
+
+# 1. Single-replica MCP Server with an OAuth Proxy
+
+The simplest pattern is a single-replica MCP server sitting behind an OAuth proxy, like the one built into 
+[FastMCP](https://gofastmcp.com/servers/auth/oauth-proxy#oauth-flow). The proxy handles the OAuth flow with your identity provider 
+and forwards authenticated requests to the MCP server:
+
+![OAuth proxy flow](/mcp-oauth-proxy.png)
+
+This is a good fit for local development, prototypes, low-risk internal services, or anything that's intentionally single-replica. 
+The benefit is simplicity: there's a small operational surface to maintain. The limitation is that auth state lives locally on the server. 
+**A pod restart or deploy can wipe it and force every user to reconnect, and a second replica won't understand state created by the first.**
+
+
+This is a great fit for 90% of people's personal projects or smaller scale apps. 
+
+However, once you start recieving 100 or 1000 requests/second, then you need to
+horizontally scale your MCP servers to handle load. If you do this, say on Kubernetes, you run into the issue of auth state being split across pods: 
+pod A receives `/authorize` and stores the state locally, the user logs in with Okta, but the load balancer sends 
+`/auth/callback` to pod B. Pod B can't find user's state from `/authorize`, and the flow fails. 
+
+# 2. Multi-replica MCP Server with Redis/Shared cache
+To handle more load than one MCP server can handle, you need to horizontally scale your server and add a shared state between them. 
+
+Specifically, every step of the OAuth flow needs to read from the same place, so pod A can start `/authorize`, pod B can handle 
+`/auth/callback`, and pod C can finish at `/token`:
+
+![Multi-replica MCP server with Redis](/mcp-redis-multi-replica.png)
+
+
+On a single replica you can get away with storing refresh tokens locally, but in a distributed system you can't. Redis stores the OAuth 
+transaction state, registered clients, refresh token state, and token/session mappings. As a bonus, pod restarts or crashes no longer 
+delete refresh tokens, so users aren't forced to reconnect after every deploy.
+
+
+This pattern allowed me to scale an MCP server at my company to handle burst loads that we expected could be up to 1000 requests/sec. I also used Redis to save me 200/300 ms by caching Microsoft Graph API requests that I used to block emailing distribution lists (to prevent AI spam and reply-all loops) and members of the C-suite as added guardrails.
+
+
+
+# 3. MCP Gateway for controlling multiple related MCP servers
+
+Once your organization runs several related MCP servers, having each one implement its own OAuth flow gets repetitive. 
+Instead, you can put an MCP gateway in front of them: users authenticate once at the gateway, and that same access token works 
+for every backend server behind it. Uber describes a similar approach in [Solving the Agent Identity Crisis](https://www.uber.com/us/en/blog/solving-the-agent-identity-crisis/).
+
+![MCP gateway in front of multiple MCP servers](/mcp-gateway.png)
+
+The gateway centralizes OAuth integration, token validation, scope enforcement, rate limiting, routing, audit logging, request correlation, 
+and policy checks, while the backend servers stay private inside the cluster. This works best when your servers share the same identity 
+provider, user population, authorization policy, and observability needs.
+
+The tradeoff is that the gateway becomes a critical security boundary and a shared dependency: if it goes down, every MCP server behind it 
+goes down too. Backend servers also shouldn't blindly trust traffic just because it comes from inside the cluster. Use mutual TLS, signed 
+service tokens, workload identity, or network policies combined with app-level auth.
+
+# Closing thoughts
+
+None of these patterns is "the best" one. Think of them as a ladder that you only climb when something breaks:
+
+- **One server, one replica?** Use an OAuth proxy and move on.
+- **Users reconnecting after every deploy, or you need a second pod?** Move your auth state into Redis.
+- **Writing the same OAuth flow for your fourth MCP server?** Put a gateway in front of them.
+
+AI frameworks will keep coming and going each month, but MCP stuck around, and OAuth has been around a lot longer than that. The tooling changes, but the goal doesn't: every tool call should trace back to a real person with a real login.
+
+Get that right, and nobody on your team ever has to paste a refresh token into `mcp.json` again.

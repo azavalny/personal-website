@@ -1,0 +1,21 @@
+%%{init: {"flowchart": {"wrappingWidth": 300}}}%%
+flowchart TB
+    Client["MCP Client<br/>(Claude Code, Cursor, ChatGPT)"]
+    Ingress["Reverse Proxy/Load Balancer"]
+
+    subgraph Pods["Multi-Replica MCP server namespace"]
+        direction LR
+        PodA["MCP Server Pod A<br/>OAuth Proxy + Tool functions"]
+        PodB["MCP Server Pod B<br/>OAuth Proxy + Tool functions"]
+        PodC["MCP Server Pod C<br/>OAuth Proxy + Tool functions"]
+    end
+
+    Redis[("Cache for Shared Auth State")]
+
+    Client <--> Ingress
+    Ingress -->|"1. /authorize"| PodA
+    Ingress -->|"2. /auth/callback"| PodB
+    Ingress -->|"3. /token"| PodC
+    PodA <--> Redis
+    PodB <--> Redis
+    PodC <--> Redis

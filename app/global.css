@@ -56,6 +56,10 @@ html {
   content: '#';
 }
 
+.prose h2 .anchor:after {
+  content: '##';
+}
+
 .prose *:hover > .anchor {
   @apply visible;
 }
@@ -66,6 +70,10 @@ html {
 
 .prose code {
   @apply px-1 py-0.5 rounded-lg;
+}
+
+.prose :not(pre) > code {
+  @apply bg-neutral-100 dark:bg-neutral-800;
 }
 
 .prose pre code {
@@ -88,11 +96,11 @@ html {
 }
 
 .prose h1 {
-  @apply text-4xl font-medium tracking-tight mt-6 mb-2;
+  @apply text-[1.5625rem] font-medium tracking-tight mt-6 mb-2;
 }
 
 .prose h2 {
-  @apply text-xl font-medium tracking-tight mt-6 mb-2;
+  @apply text-lg font-medium tracking-tight mt-6 mb-2;
 }
 
 .prose h3 {
@@ -109,6 +117,11 @@ html {
 
 .prose ul {
   @apply list-disc pl-6;
+}
+
+.prose ul ul {
+  list-style-type: circle;
+  @apply text-sm text-neutral-600 dark:text-neutral-400;
 }
 
 .prose ol {
