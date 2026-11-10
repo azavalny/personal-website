@@ -162,12 +162,12 @@ service tokens, workload identity, or network policies combined with app-level a
 
 # Closing thoughts
 
+These three patterns represent solutions at increasing levels of complexity depending on what your MCP server would do. 
+
 None of these patterns is "the best" one. Think of them as a ladder that you only climb when something breaks:
 
 - **One server, one replica?** Use an OAuth proxy and move on.
 - **Users reconnecting after every deploy, or you need a second pod?** Move your auth state into Redis.
 - **Writing the same OAuth flow for your fourth MCP server?** Put a gateway in front of them.
 
-AI frameworks will keep coming and going each month, but MCP stuck around, and OAuth has been around a lot longer than that. The tooling changes, but the goal doesn't: every tool call should trace back to a real person with a real login.
-
-Get that right, and nobody on your team ever has to paste a refresh token into `mcp.json` again.
+AI frameworks will keep coming and going each month, but MCP stuck around, and OAuth has been around a lot longer than that. The tooling changes, but the system design fundamentals core to the field of software engineering don't.
