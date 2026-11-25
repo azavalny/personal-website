@@ -1,8 +1,9 @@
-Alex Zavalny
----
+## Alex Zavalny
+
 title: "Attention is just a soft dictionary"
 publishedAt: "2026-11-25"
 summary: "Inside transformers, attention can be explained as just a dictionary lookup."
+
 ---
 
 Inside transformers, attention can be explained as just a dictionary lookup.
@@ -11,7 +12,7 @@ I’ve been looking for a way to explain the attention mechanism inside a transf
 
 I’ll first explain what a differentiable dictionary lookup is, dive deep into setting up the background for the attention mechanism, and then explain the main equation using the dictionary as context. At the end, I give other applications of differentiable dictionaries like Differentiable Dictionary Search (DDS).
 
-# What is a soft differentiable dictionary lookup table?
+# What is a soft/differentiable dictionary lookup table?
 
 In natural language processing (NLP), our data is naturally in vector format represented as arrays of numbers. In generative AI systems like Retrieval Augmented Generation (RAG), we use metrics like cosine similarity to compare how similar two vectors are, and can apply the same technique to dictionaries.
 
