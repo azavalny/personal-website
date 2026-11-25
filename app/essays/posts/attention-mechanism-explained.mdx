@@ -1,0 +1,111 @@
+Alex Zavalny
+---
+title: "Attention is just a soft dictionary"
+publishedAt: "2026-11-25"
+summary: "Inside transformers, attention can be explained as just a dictionary lookup."
+---
+
+Inside transformers, attention can be explained as just a dictionary lookup.
+
+I’ve been looking for a way to explain the attention mechanism inside a transformer’s Multi-Head Attention layer that’s accurate but still understandable for engineers, scientists, and engineering managers. Andrej Karpathy (now at Anthropic) gives one of my favorite explanations in [his video on building GPT from scratch](https://youtu.be/kCc8FmEb1nY?si=bPhmmmhWayFFfxbL&t=3722). But while re-reading Aurélien Géron’s [Hands-On Machine Learning with Scikit-Learn and PyTorch](https://www.oreilly.com/library/view/hands-on-machine-learning/9798341607972/), I found an analogy I liked even more: attention as a differentiable dictionary lookup.
+
+I’ll first explain what a differentiable dictionary lookup is, dive deep into setting up the background for the attention mechanism, and then explain the main equation using the dictionary as context. At the end, I give other applications of differentiable dictionaries like Differentiable Dictionary Search (DDS).
+
+# What is a soft differentiable dictionary lookup table?
+
+In natural language processing (NLP), our data is naturally in vector format represented as arrays of numbers. In generative AI systems like Retrieval Augmented Generation (RAG), we use metrics like cosine similarity to compare how similar two vectors are, and can apply the same technique to dictionaries.
+
+If we tried to use vectors as keys in regular dictionaries, we would be searching for an exact key vector that matches our query vector. If our query, like in a RAG system, was “What is our company’s reimbursement policy for international travel?” then we’d almost never get any matches. OpenAI’s `text-embedding-3` series models [support up to 3,072 dimensions](https://developers.openai.com/api/docs/guides/embeddings), and exact-matching arrays of over 3,000 floating point numbers will practically guarantee you never achieve any matches.
+
+With differentiable dictionary lookups, we instead compare the `query`’s similarity to each `key`, run each similarity through a softmax function so they become positive weights that add up to 1, and return a weighted sum of the `values`.
+
+The weighted sum of the values output is a “soft” answer to your query as a blend of the stored values mixed in proportion to how well each key matched. With the softmax function making our dictionaries differentiable, we can add weights to the keys and values. This allows us to train our dictionary using gradient descent to get more accurate retrievals, and is basically how the attention mechanism works!
+
+If you’ve ever read [Attention Is All You Need](https://proceedings.neurips.cc/paper_files/paper/2017/file/3f5ee243547dee91fbd053c1c4a845aa-Paper.pdf) by Vaswani et al., you’ll know that the core component of a transformer is the Multi-Head attention mechanism which helps give our inputs “soft answers” as outputs. It works exactly the same as our differentiable dictionary lookup above!
+
+# Setting up the transformer model
+
+Here is the transformer model architecture from [Attention Is All You Need](https://proceedings.neurips.cc/paper_files/paper/2017/file/3f5ee243547dee91fbd053c1c4a845aa-Paper.pdf) at a big picture.
+
+![The Transformer model architecture, with the encoder on the left and the decoder on the right](/essays/transformer-architecture.png)
+
+([Vaswani et al., 2017](https://proceedings.neurips.cc/paper_files/paper/2017/file/3f5ee243547dee91fbd053c1c4a845aa-Paper.pdf))
+
+A transformer is made up of an encoder that takes as input a batch of sentences represented as sequences of word IDs, with an input shape `[batch size, max input sentence length]`, and encodes each word into a 512 dimensional representation with an output shape of `[batch size, max input sentence length, n_dim=512]`. You’ll also see that the top part of the encoder in the gray square is stacked N times (N=6 in the original paper). Each layer's multi-head attention performs a soft lookup in which every word queries every other word in the sentence and receives a weighted blend of their values, so after N stacked layers each word's 512-dimensional vector encodes not just its own meaning but its role in the full sentence.
+
+Then, the decoder is given the target sentence as input (also a sequence of word IDs) shifted one time step to the right, as well as the outputs of the encoder. The decoder outputs a probability for each possible next word, at each time step with an output shape of `[batch size, max output sentence length, vocabulary length]`.
+
+<ZoomableImage
+  src="/essays/multi-head-attention-block.png"
+  alt="Multi-head attention: several scaled dot-product attention heads in parallel, concatenated and projected"
+  className="w-1/2"
+/>
+
+([Vaswani et al., 2017](https://proceedings.neurips.cc/paper_files/paper/2017/file/3f5ee243547dee91fbd053c1c4a845aa-Paper.pdf))
+
+If we zoom into a single Multi-Head Attention block, we can see that they’re made up of these Scaled Dot Product Attention mechanisms stacked on top of each other in parallel.
+
+<ZoomableImage
+  src="/essays/scaled-dot-product-attention.png"
+  alt="Scaled dot-product attention: query-key scores are scaled, optionally masked, passed through softmax, then multiplied by the values"
+  className="w-1/2"
+/>
+
+([Vaswani et al., 2017](https://proceedings.neurips.cc/paper_files/paper/2017/file/3f5ee243547dee91fbd053c1c4a845aa-Paper.pdf))
+
+You can think of each of these self-attention mechanisms as doing a soft dictionary lookup, the dictionary created by the encoder, of a specific property of language which is why we stack and concatenate the outputs of multiple of these. One could be used to extract whether our input is in past or present tense, and another whether it is a noun or verb.
+
+If we just used a single Scaled Dot Product Attention layer, we would only be able to query all of these characteristics in one shot. Multi-Head Attention applies multiple different linear transformations of the values, keys, and queries to apply many different projections of our input word into different subspaces. Each focusing on a subset of the word’s characteristics.
+
+# Explaining the attention mechanism
+
+Digging even deeper inside each Scaled Dot Product Attention layers, this famous equation is applied to every input sentence for the Encoder and every target sentence for the decoder.
+
+```
+Attention(Q, K, V) = softmax(Q K^T / sqrt(d_k)) V
+```
+
+- Q is a matrix containing one row per query with a shape of `[n_queries, d_keys]`, where `n_queries` is the number of queries and `d_keys` is the number of dimensions of each query and key
+- K is a matrix containing one row per key with a shape of `[n_keys, d_keys]` where `n_keys` is the number of keys and values
+- V is a matrix containing one row per value with a shape of `[n_keys, d_values]` where `d_values` is the number of dimensions of each value
+
+Now the rest of the equation involves comparing Q, with our Keys in `{Key: Value}` to find the most similar Keys and then multiplying their similarities by the values V in one shot, and in parallel, using matrices.
+
+- `QK^T` has a shape of `[n_queries, n_keys]` and contains a similarity score for each query/key pair. We then scale this down by a scaling factor to avoid saturating the softmax function giving us workable-sized gradients
+- The output of the softmax function has the same shape but all rows sum up to one. After being multiplied by V, the final output has a shape of `[n_queries, d_values]` with one row per query where the row represents the query result.
+
+In the encoder, this equation is applied to every input sentence with Q, K, V all equal to the list of words in the input sentence, so that each word is compared to every other word including itself. In the decoder, the equation is applied to every target sentence, but uses a mask to prevent the decoder from cheating and looking ahead to future words during training.
+
+The attention mechanism also has the very useful ability of parallelizing the matrix calculations very easily on clusters of GPUs and TPUs for large scale training:
+
+![Each attention head can be implemented in parallel, with a separate worker computing Attention(Q, K, V) for its own Q, K, and V](/essays/attention-parallel.png)
+
+**Why multi-head self attention works: math, intuitions and 10+1 hidden insights** [https://theaisummer.com/self-attention/](https://theaisummer.com/self-attention/)
+
+# Other notable applications of differentiable dictionaries
+
+Attention is the most famous differentiable dictionary, but it’s far from the only one. The same recipe of scoring a query against every key, running the scores through a softmax, and returning a weighted blend of the values shows up anywhere a neural network needs a memory it can read from while still being trained end to end with gradient descent.
+
+- **Non-parametric memory & RL:** DeepMind’s [Neural Episodic Control](https://arxiv.org/abs/1703.01988) (NEC) gives a reinforcement learning agent one Differentiable Neural Dictionary (DND) per action, where the keys are learned embeddings of game states and the values are Q-value estimates [[1](https://arxiv.org/abs/1703.01988)]. When the agent sees a new state, it doesn’t look for an exact match. It returns a weighted sum of the Q-values of the most similar states it has stored, which is exactly our soft lookup. Because the lookup is differentiable, the network that produces the keys trains end to end, and the agent can act on new experiences right away instead of slowly baking every one of them into its weights like DQN. More recent work shows that NEC’s dictionary is a special case of associative memory models like Hopfield networks [[2](https://neurips.cc/virtual/2024/poster/96609)].
+- **Memory networks for question answering:** [Key-Value Memory Networks](https://aclanthology.org/D16-1147/) from Facebook AI Research store facts from documents as key/value pairs, use one encoding to address memory and a different one to read it out, so a model can answer questions by reading Wikipedia directly instead of relying on a hand-built knowledge base [[3](https://aclanthology.org/D16-1147/)]. You can think of it as single-query attention over a document, a year before Attention Is All You Need.
+- **Differentiable Dictionary Search (DDS):** This one is a different flavor. In signal decomposition methods like non-negative matrix factorization (NMF), the “dictionary” is a set of spectral profiles, for example what each piano note sounds like. DDS replaces each fixed dictionary entry with a normalizing flow, so entries can adapt to the audio being decomposed and the search through the dictionary becomes differentiable, guided by how likely each entry is [[4](https://arxiv.org/abs/2211.15524)]. It isn’t a key-value lookup, but it’s the same core idea: turning a discrete “pick something from the dictionary” step into something smooth enough for gradients to flow through.
+
+# References
+
+Adaloglou, N. (2021, March 25). _Why multi-head self attention works: Math, intuitions and 10+1 hidden insights_. AI Summer. [https://theaisummer.com/self-attention/](https://theaisummer.com/self-attention/)
+
+Chateau-Laurent, H., & Alexandre, F. (2024). Relating Hopfield networks to episodic control. In _Advances in Neural Information Processing Systems_ (Vol. 37). [https://neurips.cc/virtual/2024/poster/96609](https://neurips.cc/virtual/2024/poster/96609)
+
+Géron, A. (2025). _Hands-on machine learning with Scikit-Learn and PyTorch_. O’Reilly Media. [https://www.oreilly.com/library/view/hands-on-machine-learning/9798341607972/](https://www.oreilly.com/library/view/hands-on-machine-learning/9798341607972/)
+
+Karpathy, A. (2023, January 17). _Let’s build GPT: From scratch, in code, spelled out_ [Video]. YouTube. [https://www.youtube.com/watch?v=kCc8FmEb1nY](https://www.youtube.com/watch?v=kCc8FmEb1nY)
+
+Marták, L. S., Kelz, R., & Widmer, G. (2022). _Differentiable dictionary search: Integrating linear mixing with deep non-linear modelling for audio source separation_ (arXiv:2211.15524). arXiv. [https://doi.org/10.48550/arXiv.2211.15524](https://doi.org/10.48550/arXiv.2211.15524)
+
+Miller, A., Fisch, A., Dodge, J., Karimi, A.-H., Bordes, A., & Weston, J. (2016). Key-value memory networks for directly reading documents. In _Proceedings of the 2016 Conference on Empirical Methods in Natural Language Processing_ (pp. 1400–1409). Association for Computational Linguistics. [https://doi.org/10.18653/v1/D16-1147](https://doi.org/10.18653/v1/D16-1147)
+
+OpenAI. (n.d.). _Vector embeddings_. OpenAI API documentation. Retrieved November 25, 2026, from [https://developers.openai.com/api/docs/guides/embeddings](https://developers.openai.com/api/docs/guides/embeddings)
+
+Pritzel, A., Uria, B., Srinivasan, S., Puigdomènech Badia, A., Vinyals, O., Hassabis, D., Wierstra, D., & Blundell, C. (2017). Neural episodic control. In _Proceedings of the 34th International Conference on Machine Learning_ (Vol. 70, pp. 2827–2836). PMLR. [https://arxiv.org/abs/1703.01988](https://arxiv.org/abs/1703.01988)
+
+Vaswani, A., Shazeer, N., Parmar, N., Uszkoreit, J., Jones, L., Gomez, A. N., Kaiser, Ł., & Polosukhin, I. (2017). Attention is all you need. In _Advances in Neural Information Processing Systems_ (Vol. 30). Curran Associates. [https://proceedings.neurips.cc/paper_files/paper/2017/file/3f5ee243547dee91fbd053c1c4a845aa-Paper.pdf](https://proceedings.neurips.cc/paper_files/paper/2017/file/3f5ee243547dee91fbd053c1c4a845aa-Paper.pdf)

@@ -96,6 +96,7 @@ let components = {
   h6: createHeading(6),
   Image: RoundedImage,
   img: ZoomableImage,
+  ZoomableImage,
   a: CustomLink,
   code: Code,
   Table,

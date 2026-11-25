@@ -3,7 +3,7 @@
 import Image from 'next/image'
 import { useEffect, useState } from 'react'
 
-export function ZoomableImage(props) {
+export function ZoomableImage({ className = 'w-full', ...props }) {
   let [open, setOpen] = useState(false)
 
   useEffect(() => {
@@ -23,7 +23,7 @@ export function ZoomableImage(props) {
         type="button"
         onClick={() => setOpen(true)}
         aria-label={`Enlarge image: ${props.alt}`}
-        className="relative block w-full rounded-lg overflow-hidden cursor-zoom-in transition hover:opacity-90 hover:shadow-md"
+        className={`relative block ${className} rounded-lg overflow-hidden cursor-zoom-in transition hover:opacity-90 hover:shadow-md`}
       >
         <Image
           alt={props.alt}
