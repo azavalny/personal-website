@@ -3,7 +3,15 @@
 import Image from 'next/image'
 import { useEffect, useState } from 'react'
 
-export function ZoomableImage({ className = 'w-full', ...props }) {
+export function ZoomableImage({
+  src,
+  alt,
+  className = 'w-full',
+}: {
+  src: string
+  alt: string
+  className?: string
+}) {
   let [open, setOpen] = useState(false)
 
   useEffect(() => {
@@ -22,30 +30,30 @@ export function ZoomableImage({ className = 'w-full', ...props }) {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        aria-label={`Enlarge image: ${props.alt}`}
+        aria-label={`Enlarge image: ${alt}`}
         className={`relative block ${className} rounded-lg overflow-hidden cursor-zoom-in transition hover:opacity-90 hover:shadow-md`}
       >
         <Image
-          alt={props.alt}
+          src={src}
+          alt={alt}
           className="rounded-lg object-contain w-full h-auto"
           width={0}
           height={0}
           sizes="100vw"
           style={{ width: '100%', height: 'auto' }}
-          {...props}
         />
       </button>
       {open && (
         <div
           role="dialog"
           aria-modal="true"
-          aria-label={props.alt}
+          aria-label={alt}
           onClick={() => setOpen(false)}
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 cursor-zoom-out"
         >
           <img
-            src={props.src}
-            alt={props.alt}
+            src={src}
+            alt={alt}
             className="max-h-full max-w-full rounded-lg bg-white"
           />
         </div>
